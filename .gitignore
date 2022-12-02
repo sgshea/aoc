@@ -10,3 +10,4 @@
 2022/.clj-kondo/rewrite-clj/rewrite-clj
 2022/.cpcache
 2022/.lsp/.cache
+2022/src/aoc/.nrepl-port
