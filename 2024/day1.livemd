@@ -1,0 +1,62 @@
+<!-- livebook:{"file_entries":[{"name":"day1.txt","type":"attachment"}]} -->
+
+# Day 1
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.13.0"}
+])
+```
+
+## Day 1
+
+
+
+```elixir
+# Reading input file from attachment
+input =
+  Kino.FS.file_path("day1.txt")
+  |> File.read!()
+```
+
+### Part 1
+
+Goal is to parse the input into lines. There are two columns in each line. These should be sorted then zipped together. Map the distance between the collections, then sum the zipped collection for the result.
+
+```elixir
+# Part 1
+content =
+  input
+  |> String.trim()
+  |> String.split("\n")
+  |> Enum.map(fn line -> String.split(line) end)
+  |> Enum.map(fn [a, b] -> {String.to_integer(a), String.to_integer(b)} end)
+
+col1 =
+  Enum.map(content, fn {a, _b} -> a end)
+  |> Enum.sort()
+
+col2 =
+  Enum.map(content, fn {_a, b} -> b end)
+  |> Enum.sort()
+
+zip = Enum.zip(col1, col2)
+
+sum =
+  Enum.map(zip, fn {a, b} -> abs(a - b) end)
+  |> Enum.sum()
+```
+
+### Part 2
+
+For part 2, start with the column collections. Reduce the first column to unique instances, then iterate over. Map this column to the result of the number in the first column times the amount of times (count) that it appears in the second column. The result is the sum of the first column after this is done.
+
+```elixir
+# Part 2
+similarity =
+  Enum.uniq(col1)
+  |> Enum.map(fn num ->
+    num * Enum.count(col2, fn right -> right == num end)
+  end)
+  |> Enum.sum()
+```
