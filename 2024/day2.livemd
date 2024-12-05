@@ -1,0 +1,74 @@
+<!-- livebook:{"file_entries":[{"name":"day2.txt","type":"attachment"}]} -->
+
+# Day 2
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.13.0"}
+])
+```
+
+## Part 1
+
+```elixir
+content =
+  Kino.FS.file_path("day2.txt")
+  |> File.read!()
+  |> String.trim()
+```
+
+```elixir
+defmodule SeqTest do
+  def increasing?(list) do
+    list
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.reduce(true, fn [a, b], acc ->
+      acc and (b - a <= 3 and b - a > 0)
+    end)
+  end
+
+  def decreasing?(list) do
+    list
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.reduce(true, fn [a, b], acc ->
+      acc and (a - b <= 3 and a - b > 0)
+    end)
+  end
+end
+
+safe_reports =
+  content
+  |> String.split("\n")
+  |> Enum.map(fn line ->
+    String.split(line)
+    |> Enum.map(fn num -> String.to_integer(num) end)
+  end)
+  |> Enum.count(fn line ->
+    SeqTest.increasing?(line) or SeqTest.decreasing?(line)
+  end)
+```
+
+## Part 2
+
+```elixir
+defmodule Dampener do
+  def dampened_lists(report) do
+    for i <- 0..(length(report) - 1) do
+      List.delete_at(report, i)
+    end
+  end
+end
+
+safe_problem_dampener =
+  content
+  |> String.split("\n")
+  |> Enum.map(fn line ->
+    String.split(line)
+    |> Enum.map(fn num -> String.to_integer(num) end)
+  end)
+  |> Enum.count(fn line ->
+    line
+    |> Dampener.dampened_lists()
+    |> Enum.any?(fn single -> SeqTest.increasing?(single) or SeqTest.decreasing?(single) end)
+  end)
+```

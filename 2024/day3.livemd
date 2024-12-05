@@ -1,0 +1,86 @@
+<!-- livebook:{"file_entries":[{"name":"day3_1.txt","type":"attachment"}]} -->
+
+# Day 3
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.13.0"}
+])
+```
+
+## Part 1
+
+```elixir
+content =
+  Kino.FS.file_path("day3_1.txt")
+  |> File.read!()
+  |> String.trim()
+```
+
+```elixir
+defmodule MulParser do
+  def scan_mul(input) do
+    Regex.scan(~r/mul\(\d{1,3}[,]\d{1,3}\)/, input)
+    |> List.flatten()
+    # For each mul expression -> Get the two integers
+    |> Enum.map(fn line ->
+      Regex.scan(~r/\d{1,3}/, line)
+      |> List.flatten()
+      |> Enum.map(fn n -> String.to_integer(n) end)
+      # Multiply the integers
+      |> Enum.reduce(fn x, acc -> x * acc end)
+    end)
+    # Sum for result
+    |> Enum.sum()
+  end
+end
+
+MulParser.scan_mul(content)
+```
+
+## Part 2
+
+```elixir
+# For this one we will use the same scan_mul in sections where it is enabled
+defmodule Conditional do
+  def split_at_first_occurrence(string, delimiter) do
+    # Split the string at the delimiter, with only 2 parts so that it splits at first occurence
+    parts = String.split(string, delimiter, parts: 2)
+
+    # Return the parts as a tuple
+    case parts do
+      [head, tail] -> {head, tail}
+      # If the delimiter is not found, return the original string and an empty string
+      _ -> {string, ""}
+    end
+  end
+
+  def compute(input, result, computing) do
+    case computing do
+      :do ->
+        # Split head and tail
+        {head, tail} = Conditional.split_at_first_occurrence(input, "don't()")
+
+        # Compute result, if there is nothing left, return result
+        if tail == "" do
+          MulParser.scan_mul(head) + result
+        else
+          # Else compute the tail as well
+          compute(tail, MulParser.scan_mul(head) + result, :dont)
+        end
+
+      :dont ->
+        # On don't case we just ignore the head and goto tail
+        {_head, tail} = Conditional.split_at_first_occurrence(input, "do()")
+
+        if tail == "" do
+          result
+        else
+          compute(tail, result, :do)
+        end
+    end
+  end
+end
+
+Conditional.compute(content, 0, :do)
+```
