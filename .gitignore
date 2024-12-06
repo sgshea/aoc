@@ -1,13 +1,2 @@
-.clj-kondo/.cache/v1/cljc
-.lsp/.cache
-.clj-kondo/.cache/v1/lock
-.clj-kondo/.cache/v1/clj
-2022/.clj-kondo/.cache/v1/clj
-2022/.clj-kondo/.cache/v1/cljc
-2022/.clj-kondo/.cache/v1/cljs
-2022/.clj-kondo/.cache/v1
-2022/.clj-kondo/babashka/fs
-2022/.clj-kondo/rewrite-clj/rewrite-clj
-2022/.cpcache
-2022/.lsp/.cache
-2022/src/aoc/.nrepl-port
+./2022/resources/*
+./2024/files/*

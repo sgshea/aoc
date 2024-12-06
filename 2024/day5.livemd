@@ -1,0 +1,88 @@
+<!-- livebook:{"file_entries":[{"name":"day5_1.txt","type":"attachment"}]} -->
+
+# Day 5
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.13.0"}
+])
+```
+
+## Part 1
+
+```elixir
+[first, last] =
+  Kino.FS.file_path("day5_1.txt")
+  |> File.read!()
+  |> String.split("\n\n", trim: true) # Splitting sections by empty line
+  |> Enum.map(fn section -> String.split(section, "\n", trim: true) end)
+```
+
+```elixir
+defmodule Part1 do
+  # Creates a map of the page ordering rules
+  # We use the second number as the key
+  def precendence(section) do
+    Enum.reduce(section, %{}, fn item, acc ->
+      [val, key] = String.split(item, "|")
+      Map.update(acc, key, [val], fn values -> [val | values] end)
+    end)
+  end
+
+  def validate_update(numbers, rules) do
+    Enum.with_index(numbers)
+    |> Enum.reduce_while(:ok, fn {n, idx}, _acc ->
+      next_numbers = Enum.slice(numbers, idx + 1..-1//1)
+
+      case Map.get(rules, n) do
+        nil ->
+          {:cont, :ok}
+
+        forbidden ->
+          if Enum.any?(next_numbers, &(&1 in forbidden)) do
+            {:halt, :error}
+          else
+            {:cont, :ok}
+          end
+      end
+    end)
+  end
+end
+
+rules = Part1.precendence(first)
+
+updates =
+  last |> Enum.map(fn line -> 
+    numbers = String.split(line, ",")
+
+    case Part1.validate_update(numbers, rules) do
+      :ok ->
+        Enum.at(numbers, Integer.floor_div(length(numbers), 2)) |> String.to_integer
+      :error ->
+        0
+    end
+  end)
+|> Enum.sum
+```
+
+## Part 2
+
+```elixir
+bad_updates =
+  last
+  |> Enum.map(fn line ->
+    numbers = String.split(line, ",")
+
+    case Part1.validate_update(numbers, rules) do
+      :ok ->
+        # ignoring correct ones now
+        0
+
+      :error ->
+        # We just have to sort using the rules
+        sorted = Enum.sort(numbers, fn a, b -> b in Map.get(rules, a) end)
+        Enum.at(sorted, Integer.floor_div(length(sorted), 2)) |> String.to_integer()
+    end
+  end)
+  |> Enum.sum()
+```

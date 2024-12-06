@@ -1,0 +1,73 @@
+<!-- livebook:{"file_entries":[{"name":"day4_1.txt","type":"attachment"}]} -->
+
+# Day4
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.13.0"},
+])
+```
+
+## Part 1
+
+First we need some kind of 2d list.
+
+Below is a way I saw someone transform it into a map with indicies as key
+
+```elixir
+content =
+  Kino.FS.file_path("day4_1.txt")
+  |> File.read!()
+  |> String.split("\n", trim: true)
+  |> Enum.with_index()
+  |> Enum.flat_map(fn {line, row} ->
+    String.to_charlist(line)
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {char, col} ->
+      [{{row, col}, char}]
+    end)
+  end)
+  |> Map.new()
+```
+
+```elixir
+defmodule Day4 do
+  def directions do
+    [{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}]
+  end
+
+  def traverse({dx, dy}, grid) do
+    Enum.count(Map.keys(grid), fn coord ->
+      coord
+      |> Stream.iterate(fn {x, y} -> {x + dx, y + dy} end)
+      |> Stream.take(4)
+      |> Enum.map(&grid[&1])
+      |> Kernel.==(~c"XMAS")
+    end)
+  end
+end
+
+Day4.directions()
+|> Enum.map(fn {dx, dy} ->
+  Day4.traverse({dx, dy}, content)
+end)
+|> Enum.sum()
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def x_mas(grid) do
+    grid
+    |> Map.keys
+    |> Enum.count(fn {x, y} ->
+      grid[{x, y}] == ?A and
+        [grid[{x - 1, y - 1}], grid[{x + 1, y + 1}]] in [~c"MS", ~c"SM"] and
+        [grid[{x - 1, y + 1}], grid[{x + 1, y - 1}]] in [~c"MS", ~c"SM"]
+    end)
+  end
+end
+
+Part2.x_mas(content)
+```
