@@ -1,0 +1,103 @@
+<!-- livebook:{"file_entries":[{"name":"day6_1.txt","type":"attachment"}]} -->
+
+# Day 6
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.13.0"},
+])
+```
+
+## Part 1
+
+```elixir
+content =
+  Kino.FS.file_path("day6_1.txt")
+  |> File.read!
+  |> String.split("\n", trim: true)
+  |> Enum.with_index()
+  |> Enum.flat_map(fn {line, row} ->
+    String.to_charlist(line)
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {char, col} ->
+      [{{row, col}, char}]
+    end)
+  end)
+  |> Map.new()
+```
+
+We have to track the steps of a guard:
+
+* First find where the guard starts `^`
+* The guard walks in the direction the arrow faces 'upwards' initially (remember due to how our grid is constructed that this is `-1, 0` for us, too lazy to correct this)
+* Once encountering any obstacle `#`, the guard turns 90 degrees and continues
+* Our result is the set of positions that are visited by the guard
+
+```elixir
+defmodule Guard do
+  # Find location of guard
+  def find_guard(grid) do
+    Map.to_list(grid)
+    |> Enum.find_value(fn {{row, col}, char} ->
+      if char == ?^ do
+        {row, col}
+      end
+    end)
+  end
+
+  # walks in direction from location until encountering '#'
+  # returns the amount progressed and the new position
+  def walk_forward(grid, {x, y}, {dx, dy}, visited \\ MapSet.new()) do
+    val = Map.get(grid, {x + dx, y + dy})
+
+    case val do
+      nil -> MapSet.put(visited, {x, y})
+      ?# -> walk_forward(grid, {x, y}, {dy, -dx}, visited)
+      _ -> walk_forward(grid, {x + dx, y + dy}, {dx, dy}, MapSet.put(visited, {x, y}))
+    end
+  end
+end
+
+start = Guard.find_guard(content)
+visited = Guard.walk_forward(content, start, {-1, 0})
+IO.inspect(MapSet.size(visited))
+```
+
+## Part 2
+
+For part 2 we have to detect loops.
+
+We can use the visited set we have saved, as loops are created by placing a new obstacle onto the visited path.
+
+Then we have to detect if we ever visit the same position in front of an obstacle (with the same facing direction)
+
+```elixir
+defmodule GuardObstacle do
+  def modified_walk_forward(grid, {x, y}, {dx, dy}, obstacles \\ MapSet.new()) do
+    val = Map.get(grid, {x + dx, y + dy})
+
+    case val do
+      # no loop
+      nil ->
+        false
+
+      ?# ->
+        if MapSet.member?(obstacles, {x, y, {dx, dy}}) do
+          # we have been here before, in this direction
+          true
+        else
+          modified_walk_forward(grid, {x, y}, {dy, -dx}, MapSet.put(obstacles, {x, y, {dx, dy}}))
+        end
+
+      _ ->
+        modified_walk_forward(grid, {x + dx, y + dy}, {dx, dy}, obstacles)
+    end
+  end
+end
+
+obstacles =
+  Enum.filter(visited, fn obstacle ->
+    GuardObstacle.modified_walk_forward(Map.put(content, obstacle, ?#), start, {-1, 0})
+  end)
+  |> Enum.count
+```
