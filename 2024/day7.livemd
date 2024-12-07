@@ -1,0 +1,81 @@
+<!-- livebook:{"file_entries":[{"name":"day7_1.txt","type":"attachment"}]} -->
+
+# Day7
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.13.0"}
+])
+```
+
+## Part1
+
+```elixir
+content =
+  Kino.FS.file_path("day7_1.txt")
+  |> File.read!()
+  |> String.split("\n", trim: true)
+```
+
+This day is a pretty simple parsing exercise.
+
+We just need to get the test value, which is the first number before the ':', the rest of the numbers must combine with some combination of operators into the test value.
+
+```elixir
+defmodule Day7 do
+  def collect_results(operators, [head | tail], results) do
+    new_results =
+      Enum.flat_map(operators, fn op ->
+        Enum.map(results, fn n -> op.(n, head) end)
+      end)
+
+    case tail do
+      [] -> new_results
+      _ -> collect_results(operators, tail, new_results)
+    end
+  end
+
+  def concat_integers(a, b) do
+    Integer.to_string(a) <> Integer.to_string(b)
+    |> String.to_integer
+  end
+end
+
+formatted =
+  content
+  |> Enum.map(fn line ->
+    [first, last] = String.split(line, ":")
+    test_val = String.to_integer(first)
+
+    numbers =
+      String.split(last, " ", trim: true) |> Enum.map(fn n -> String.to_integer(n) end)
+    {test_val, numbers}
+  end)
+
+part_1 =
+  formatted
+  |> Enum.map(fn {test_val, [head | tail]} ->
+    if test_val in Day7.collect_results([&Kernel.+/2, &Kernel.*/2], tail, [head]) do
+      test_val
+    else
+      0
+    end
+  end)
+  |> Enum.sum()
+```
+
+```elixir
+# For part 2 we just have to add a new operation
+# this is Day7.concat_integers/2
+# unfortunately, converting to strings then back again is quite slow
+part_2 =
+  formatted
+  |> Enum.map(fn {test_val, [head | tail]} ->
+    if test_val in Day7.collect_results([&Kernel.+/2, &Kernel.*/2, &Day7.concat_integers/2], tail, [head]) do
+      test_val
+    else
+      0
+    end
+  end)
+  |> Enum.sum()
+```
