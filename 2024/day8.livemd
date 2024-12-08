@@ -1,0 +1,153 @@
+<!-- livebook:{"file_entries":[{"name":"day8_1.txt","type":"attachment"}]} -->
+
+# Day 8
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.13.0"}
+])
+```
+
+## Part1
+
+```elixir
+content =
+  Kino.FS.file_path("day8_1.txt")
+  |> File.read!()
+  |> String.split("\n", trim: true)
+  |> Enum.with_index()
+  |> Enum.flat_map(fn {line, row} ->
+    String.to_charlist(line)
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {char, col} ->
+      [{{row, col}, char}]
+    end)
+  end)
+  |> Map.new()
+```
+
+```elixir
+test = "............
+........0...
+.....0......
+.......0....
+....0.......
+......A.....
+............
+............
+........A...
+.........A..
+............
+............"
+  |> String.split("\n", trim: true)
+  |> Enum.with_index()
+  |> Enum.flat_map(fn {line, row} ->
+    String.to_charlist(line)
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {char, col} ->
+      [{{row, col}, char}]
+    end)
+  end)
+  |> Map.new()
+```
+
+
+
+```elixir
+defmodule Part1 do
+  # Finds antenna locations
+  # Returns a new map with the key being unique antenna types and values a list of locations
+  def find_antenna_locations(grid) do
+    Enum.reduce(grid, %{}, fn {location, character}, acc ->
+      if character not in [?.] do
+        Map.update(acc, character, [location], fn locations -> [location | locations] end)
+      else
+        acc
+      end
+    end)
+  end
+
+  def check_antinode(grid, {{x1, y1}, antenna_list}) do
+    # For each antinode, find distance to every other antinode
+    # and check if there is something twice that far
+    # returns antinode location so we can check for duplicates
+    Enum.map(antenna_list, fn {x2, y2} ->
+      if {x1, y1} == {x2, y2} do
+        false
+      else
+        vx = (x2 - x1) * 2
+        vy = (y2 - y1) * 2
+        location = {x1 + vx, y1 + vy}
+
+        case Map.get(grid, location) do
+          nil -> false
+          _ -> location
+        end
+      end
+    end)
+  end
+
+  def check_antinodes(grid) do
+    antennas = Part1.find_antenna_locations(grid)
+
+    Enum.flat_map(antennas, fn {_type, list} ->
+      Enum.flat_map(list, fn a -> Part1.check_antinode(grid, {a, list}) end)
+    end)
+  end
+end
+
+content
+|> Part1.check_antinodes()
+# Make sure we only count unique locations
+|> Enum.uniq()
+# remove the single false
+|> Enum.filter(fn e -> e end)
+|> Enum.count()
+```
+
+## Part 2
+
+Now we need to modify a bit, to search every single grid space for intersections with two antennas
+
+```elixir
+defmodule Part2 do
+  def collect_locations(grid, {x, y}, {vx, vy, iteration}, list \\ []) do
+    location = {x + vx * iteration, y + vy * iteration}
+
+    case Map.get(grid, location) do
+      nil -> list
+      _ -> collect_locations(grid, {x, y}, {vx, vy, iteration + 1}, [location | list])
+    end
+  end
+
+  # Modified to use the recursive collect_locations to find all possible locations until grid ends
+  def check_antinode(grid, {{x1, y1}, antenna_list}) do
+    Enum.map(antenna_list, fn {x2, y2} ->
+      if {x1, y1} == {x2, y2} do
+        false
+      else
+        vx = x2 - x1
+        vy = y2 - y1
+
+        collect_locations(grid, {x1, y1}, {vx, vy, 1})
+      end
+    end)
+  end
+
+  def check_antinodes(grid) do
+    antennas = Part1.find_antenna_locations(grid)
+
+    Enum.flat_map(antennas, fn {_type, list} ->
+      Enum.flat_map(list, fn a -> Part2.check_antinode(grid, {a, list}) end)
+      # this flatten was very important :(
+      |> List.flatten()
+    end)
+  end
+end
+
+content
+|> Part2.check_antinodes()
+|> Enum.uniq()
+|> Enum.filter(fn e -> e end)
+|> Enum.count()
+```
