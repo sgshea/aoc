@@ -1,0 +1,163 @@
+<!-- livebook:{"file_entries":[{"name":"day09_1.txt","type":"attachment"}]} -->
+
+# Day 9
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.13.0"}
+])
+```
+
+## Section
+
+```elixir
+content =
+  Kino.FS.file_path("day09_1.txt")
+  |> File.read!()
+
+example = """
+2333133121414131402
+"""
+```
+
+```elixir
+defmodule Day09 do
+  def parse(input) do
+    input
+    |> String.trim()
+  end
+
+  def part1(input) do
+    Day09.parse(input)
+    |> decode
+    |> List.flatten()
+    |> Enum.with_index()
+    |> Enum.split_with(fn {val, _} ->
+      val == :free
+    end)
+    |> move
+    |> checksum
+  end
+
+  def part2(input) do
+    Day09.parse(input)
+    |> decode
+    |> Enum.with_index()
+    |> Enum.split_with(fn {ls, _} ->
+      :free in ls
+    end)
+    |> move_part2
+    |> Enum.with_index()
+    |> checksum
+  end
+
+  # Tries to compress the files into earlier free spaces
+  defp move({free, file}) do
+    {map, _} =
+      file
+      # Iterate from last file block
+      |> Enum.reverse()
+      |> Enum.reduce_while({%{}, free}, fn {block, idx}, {acc, free} ->
+        # Finds first free space
+        {_, free_idx} = List.first(free)
+
+        # If it is before the current index
+        if free_idx <= idx do
+          {:cont, {Map.put(acc, free_idx, block), tl(free)}}
+        else
+          {:cont, {Map.put(acc, idx, block), free}}
+        end
+      end)
+
+    map
+  end
+
+  defp move_part2({free, file}) do
+    # Make free list into a map so that we can more easily update
+    free = free |> Enum.map(fn {val, idx} -> {idx, val} end) |> Map.new()
+
+    {map, frees} =
+      file
+      |> Enum.reverse()
+      |> Enum.reduce_while({%{}, free}, fn {block, idx}, {acc, free} ->
+        # Find first free block with enough space
+
+        result =
+          Enum.find(free, fn {free_idx, free_list} ->
+            length(free_list) >= length(block) && free_idx < idx
+          end)
+
+        case result do
+          {free_idx, free_list} ->
+            {:cont,
+             {Map.update(acc, free_idx, block, fn current ->
+                current ++ block
+              end),
+              Map.put(free, free_idx, Enum.drop(free_list, length(block)))
+              |> Map.put(idx, List.duplicate(:free, length(block)))}}
+
+          nil ->
+            {:cont, {Map.put(acc, idx, block), free}}
+        end
+      end)
+
+    Map.merge(map, frees, fn _k, l1, l2 ->
+      l1 ++ l2
+    end)
+    |> Map.values()
+    |> List.flatten()
+  end
+
+  # Turning the list of characters into a map with the key being current index, and expanding the blocks
+  defp decode(input) do
+    input
+    |> String.graphemes()
+    |> Enum.map(fn e -> String.to_integer(e) end)
+    |> Enum.with_index()
+    |> Enum.map(fn {val, idx} ->
+      case rem(idx, 2) == 0 do
+        true ->
+          List.duplicate(div(idx, 2), val)
+
+        false ->
+          List.duplicate(:free, val)
+      end
+    end)
+  end
+
+  # Computes checksum from the map
+  defp checksum(map) do
+    map
+    |> Enum.map(fn {a, b} ->
+      if a == :free do
+        0
+      else
+        a * b
+      end
+    end)
+    |> Enum.sum()
+  end
+end
+```
+
+```elixir
+# Part 1
+# Example should be 1928
+example
+|> Day09.part1()
+|> IO.inspect()
+
+content
+|> Day09.part1()
+```
+
+```elixir
+# Part 2
+# Example should be 2858
+example
+|> Day09.part2()
+|> IO.inspect()
+
+content
+|> Day09.part2()
+```

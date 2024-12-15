@@ -36,8 +36,8 @@ defmodule Day7 do
   end
 
   def concat_integers(a, b) do
-    Integer.to_string(a) <> Integer.to_string(b)
-    |> String.to_integer
+    (Integer.to_string(a) <> Integer.to_string(b))
+    |> String.to_integer()
   end
 end
 
@@ -49,6 +49,7 @@ formatted =
 
     numbers =
       String.split(last, " ", trim: true) |> Enum.map(fn n -> String.to_integer(n) end)
+
     {test_val, numbers}
   end)
 

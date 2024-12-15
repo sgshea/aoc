@@ -51,8 +51,6 @@ test = "............
   |> Map.new()
 ```
 
-
-
 ```elixir
 defmodule Part1 do
   # Finds antenna locations
